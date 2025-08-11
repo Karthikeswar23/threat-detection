@@ -1,0 +1,56 @@
+#include <Arduino.h>
+#include <ESP32Servo.h>
+
+Servo servoPan;
+Servo servoTilt;
+
+const int servoPanPin = 14;    // G14 for pan
+const int servoTiltPin = 27;   // G27 for tilt
+const int laserPin = 4;        // G4 for laser control
+
+int panAngle = 90;  // start centered (0-180)
+int tiltAngle = 40; // start middle of 0-80 range
+bool laserOn = false;
+
+void setup() {
+  Serial.begin(115200);
+
+  servoPan.attach(servoPanPin);
+  servoTilt.attach(servoTiltPin);
+  pinMode(laserPin, OUTPUT);
+  digitalWrite(laserPin, LOW);
+
+  servoPan.write(panAngle);
+  servoTilt.write(tiltAngle);
+}
+
+void loop() {
+  if (Serial.available()) {
+    String data = Serial.readStringUntil('\n'); // read until newline
+    data.trim();
+
+    int firstComma = data.indexOf(',');
+    int secondComma = data.indexOf(',', firstComma + 1);
+
+    if (firstComma > 0 && secondComma > firstComma) {
+      String panStr = data.substring(0, firstComma);
+      String tiltStr = data.substring(firstComma + 1, secondComma);
+      String laserStr = data.substring(secondComma + 1);
+
+      panAngle = constrain(panStr.toInt(), 0, 180);
+      tiltAngle = constrain(tiltStr.toInt(), 0, 80);  // tilt limited 0-80
+      laserOn = (laserStr.toInt() == 1);
+
+      servoPan.write(panAngle);
+      servoTilt.write(tiltAngle);
+      digitalWrite(laserPin, laserOn ? HIGH : LOW);
+
+      Serial.print("Pan: ");
+      Serial.print(panAngle);
+      Serial.print(" Tilt: ");
+      Serial.print(tiltAngle);
+      Serial.print(" Laser: ");
+      Serial.println(laserOn ? "ON" : "OFF");
+    }
+  }
+}
